@@ -1,0 +1,101 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "title": "Ignoa API 모니터링",
+  "uid": "ignoa-api",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "panels": [
+    {
+      "title": "TPS (초당 처리 요청)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\"}[1m]))", "legendFormat": "req/s", "refId": "A" }
+      ]
+    },
+    {
+      "title": "응답시간 (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{application=\"ignoa-api\"}[5m])) by (le))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"ignoa-api\"}[5m])) by (le))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{application=\"ignoa-api\"}[5m])) by (le))", "legendFormat": "p99", "refId": "C" }
+      ]
+    },
+    {
+      "title": "HTTP 상태코드별 요청률",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "expr": "sum by (status) (rate(http_server_requests_seconds_count{application=\"ignoa-api\"}[1m]))", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "5xx 에러율",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20 } } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\", status=~\"5..\"}[1m]))", "legendFormat": "5xx/s", "refId": "A" }
+      ]
+    },
+    {
+      "title": "JVM 힙 메모리",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "expr": "sum(jvm_memory_used_bytes{application=\"ignoa-api\", area=\"heap\"})", "legendFormat": "used", "refId": "A" },
+        { "expr": "sum(jvm_memory_max_bytes{application=\"ignoa-api\", area=\"heap\"})", "legendFormat": "max", "refId": "B" }
+      ]
+    },
+    {
+      "title": "CPU 사용률",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "expr": "process_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "process", "refId": "A" },
+        { "expr": "system_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "system", "refId": "B" }
+      ]
+    },
+    {
+      "title": "JVM 스레드",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "expr": "jvm_threads_live_threads{application=\"ignoa-api\"}", "legendFormat": "live", "refId": "A" },
+        { "expr": "jvm_threads_daemon_threads{application=\"ignoa-api\"}", "legendFormat": "daemon", "refId": "B" }
+      ]
+    },
+    {
+      "title": "GC 소요시간",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_sum{application=\"ignoa-api\"}[1m])", "legendFormat": "{{action}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "HikariCP 커넥션 (active / idle / pending)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "hikaricp_connections_active{application=\"ignoa-api\"}", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_idle{application=\"ignoa-api\"}", "legendFormat": "idle", "refId": "B" },
+        { "expr": "hikaricp_connections_pending{application=\"ignoa-api\"}", "legendFormat": "pending", "refId": "C" }
+      ]
+    }
+  ]
+}
