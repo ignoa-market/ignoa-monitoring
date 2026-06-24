@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:3.12
+    image: prom/prometheus:v3.12.0
     container_name: ignoa-prometheus
     ports:
       - "39090:9090"
@@ -9,6 +9,29 @@ services:
       - prometheus-data:/prometheus
     networks:
       - ignoa-api_default
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.7.2
+    container_name: ignoa-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+    networks:
+      - ignoa-api_default
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: ignoa-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - ignoa-api_default
+    depends_on:
+      - loki
     restart: unless-stopped
 
   grafana:
@@ -30,12 +53,10 @@ services:
       - loki
     restart: unless-stopped
 
-
-
-
-
 volumes:
   prometheus-data:
+  grafana-data:
+  loki-data:
 
 networks:
   ignoa-api_default:
