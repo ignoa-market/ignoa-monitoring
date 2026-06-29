@@ -4,7 +4,7 @@
   "title": "Ignoa 부하테스트",
   "uid": "ignoa-api",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
@@ -21,9 +21,20 @@
       ]
     },
     {
-      "title": "엔드포인트별 응답시간 p95 — 조회(피해) vs 입찰(가해)",
+      "title": "Tomcat 스레드 (busy / max) — 경합 이동처",
       "type": "timeseries",
       "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "tomcat_threads_busy_threads{application=\"ignoa-api\"}", "legendFormat": "busy", "refId": "A" },
+        { "expr": "tomcat_threads_current_threads{application=\"ignoa-api\"}", "legendFormat": "current", "refId": "B" },
+        { "expr": "tomcat_threads_config_max_threads{application=\"ignoa-api\"}", "legendFormat": "max(천장 200)", "refId": "C" }
+      ]
+    },
+    {
+      "title": "엔드포인트별 응답시간 p95 — 조회(피해) vs 입찰(가해)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
       "targets": [
         { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/items\", method=\"GET\"}[1m])) by (le))", "legendFormat": "조회 p95 (/api/items)", "refId": "A" },
@@ -33,7 +44,7 @@
     {
       "title": "5xx 에러율 — 진짜 장애 시점",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
       "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 20 } } },
       "targets": [
         { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\", status=~\"5..\"}[1m]))", "legendFormat": "5xx/s", "refId": "A" }
@@ -42,7 +53,7 @@
     {
       "title": "CPU 사용률 — daisy 자원 경쟁 확인",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
       "fieldConfig": { "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
       "targets": [
         { "expr": "process_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "app process", "refId": "A" },
