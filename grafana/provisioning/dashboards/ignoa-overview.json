@@ -113,22 +113,10 @@
       ]
     },
     {
-      "title": "트랜잭션 | 실행 시간",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 36 },
-      "description": "락 보유 시간과 함께 비교한다. 트랜잭션 시간 상승은 쿼리·flush·commit 또는 DB 커넥션 획득 경합을 의심하는 신호다.",
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
-      "targets": [
-        { "expr": "sum by (operation) (rate(transaction_duration_seconds_sum{application=\"ignoa-api\", operation=~\"$operation\"}[1m])) / sum by (operation) (rate(transaction_duration_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} avg", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(transaction_duration_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(transaction_duration_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" }
-      ]
-    },
-    {
       "title": "DB | Hikari 커넥션 획득 시간",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 36 },
-      "description": "operation별 값이 아닌 HikariPool 전체 분포다. 같은 시간대의 트랜잭션/락 보유 시간과 비교해 풀 경합 여부를 판단한다.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 36 },
+      "description": "operation별 값이 아닌 HikariPool 전체 분포다. 같은 시간대의 락 보유 시간과 비교해 풀 경합 여부를 판단한다.",
       "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
       "targets": [
         { "expr": "histogram_quantile(0.95, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{application=\"ignoa-api\"}[1m])))", "legendFormat": "p95", "refId": "A" },
@@ -138,7 +126,7 @@
     {
       "title": "DB | Hikari 커넥션 획득 timeout",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 45 },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 36 },
       "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
       "targets": [
         { "expr": "sum(rate(hikaricp_connections_timeout_total{application=\"ignoa-api\"}[1m]))", "legendFormat": "timeout/s", "refId": "A" }
