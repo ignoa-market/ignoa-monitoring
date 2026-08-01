@@ -1,36 +1,48 @@
 {
   "annotations": { "list": [] },
   "editable": true,
-  "title": "Ignoa API | 동시성 부하 테스트",
+  "title": "Ignoa API | Overview",
   "uid": "ignoa-api",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 5,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
-  "templating": {
-    "list": [
-      {
-        "name": "operation",
-        "label": "Lock operations",
-        "type": "query",
-        "definition": "label_values(lock_hold_time_seconds_count{application=\"ignoa-api\"}, operation)",
-        "query": "label_values(lock_hold_time_seconds_count{application=\"ignoa-api\"}, operation)",
-        "current": { "text": "bid", "value": "bid" },
-        "includeAll": true,
-        "allValue": ".*",
-        "multi": true,
-        "refresh": 1,
-        "sort": 1,
-        "hide": 0
-      }
-    ]
-  },
+  "templating": { "list": [] },
   "panels": [
+    {
+      "title": "API | 전체 요청량",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "description": "Actuator를 제외한 전체 API의 초당 요청 수다.",
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\", uri!~\"/actuator.*\"}[1m]))", "legendFormat": "requests/s", "refId": "A" }
+      ]
+    },
+    {
+      "title": "API | 전체 HTTP 응답 시간 p95",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"ignoa-api\", uri!~\"/actuator.*\"}[1m])) by (le))", "legendFormat": "all API p95", "refId": "A" }
+      ]
+    },
+    {
+      "title": "API | HTTP 5xx 오류",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "description": "초당 5xx 응답 수다. 오류가 없으면 0으로 표시한다.",
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 20 } } },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\", status=~\"5..\"}[1m])) or vector(0)", "legendFormat": "5xx/s", "refId": "A" }
+      ]
+    },
     {
       "title": "시스템 | HikariCP 커넥션",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
       "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
       "targets": [
         { "expr": "hikaricp_connections_active{application=\"ignoa-api\"}", "legendFormat": "active", "refId": "A" },
@@ -41,22 +53,12 @@
     {
       "title": "시스템 | Tomcat 스레드",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
       "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
       "targets": [
         { "expr": "tomcat_threads_busy_threads{application=\"ignoa-api\"}", "legendFormat": "busy", "refId": "A" },
         { "expr": "tomcat_threads_current_threads{application=\"ignoa-api\"}", "legendFormat": "current", "refId": "B" },
-        { "expr": "tomcat_threads_config_max_threads{application=\"ignoa-api\"}", "legendFormat": "max(천장 200)", "refId": "C" }
-      ]
-    },
-    {
-      "title": "API | HTTP 응답 시간 p95 (입찰, 조회)",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
-      "targets": [
-        { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/items\", method=\"GET\"}[1m])) by (le))", "legendFormat": "read p95", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=\"/api/items/{itemId}/bids\", method=\"POST\"}[1m])) by (le))", "legendFormat": "bid p95", "refId": "B" }
+        { "expr": "tomcat_threads_config_max_threads{application=\"ignoa-api\"}", "legendFormat": "max", "refId": "C" }
       ]
     },
     {
@@ -66,70 +68,7 @@
       "fieldConfig": { "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
       "targets": [
         { "expr": "process_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "app process", "refId": "A" },
-        { "expr": "system_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "system(전체)", "refId": "B" }
-      ]
-    },
-    {
-      "title": "API | HTTP 5xx 오류율",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
-      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 20 } } },
-      "targets": [
-        { "expr": "sum(rate(http_server_requests_seconds_count{application=\"ignoa-api\", status=~\"5..\"}[1m]))", "legendFormat": "5xx/s", "refId": "A" }
-      ]
-    },
-    {
-      "title": "락 | 획득 대기 시간",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
-      "description": "outcome=acquired만 집계한다. waitTime 초과 실패 건수는 아래 획득 결과율 패널에서 확인한다.",
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
-      "targets": [
-        { "expr": "histogram_quantile(0.50, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" }
-      ]
-    },
-    {
-      "title": "락 | 획득 결과율",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 27 },
-      "description": "timeout 비율이 증가하는 부하 구간이 waitTime의 실제 fail-fast 지점이다.",
-      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
-      "targets": [
-        { "expr": "sum by (operation, outcome) (rate(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} / {{outcome}}", "refId": "A" }
-      ]
-    },
-    {
-      "title": "락 | 보유 시간",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 27 },
-      "description": "평균은 단일 item의 순차 처리 용량 추정에, p95/p99는 leaseTime 여유 산정에 사용한다.",
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
-      "targets": [
-        { "expr": "sum by (operation) (rate(lock_hold_time_seconds_sum{application=\"ignoa-api\", operation=~\"$operation\"}[1m])) / sum by (operation) (rate(lock_hold_time_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} avg", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" }
-      ]
-    },
-    {
-      "title": "DB | Hikari 커넥션 획득 시간",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 36 },
-      "description": "operation별 값이 아닌 HikariPool 전체 분포다. 같은 시간대의 락 보유 시간과 비교해 풀 경합 여부를 판단한다.",
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
-      "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{application=\"ignoa-api\"}[1m])))", "legendFormat": "p95", "refId": "A" },
-        { "expr": "histogram_quantile(0.99, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{application=\"ignoa-api\"}[1m])))", "legendFormat": "p99", "refId": "B" }
-      ]
-    },
-    {
-      "title": "DB | Hikari 커넥션 획득 timeout",
-      "type": "timeseries",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 36 },
-      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
-      "targets": [
-        { "expr": "sum(rate(hikaricp_connections_timeout_total{application=\"ignoa-api\"}[1m]))", "legendFormat": "timeout/s", "refId": "A" }
+        { "expr": "system_cpu_usage{application=\"ignoa-api\"}", "legendFormat": "system", "refId": "B" }
       ]
     }
   ]

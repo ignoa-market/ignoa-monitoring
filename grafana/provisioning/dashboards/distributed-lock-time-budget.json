@@ -1,0 +1,110 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "title": "Distributed Lock | Time Budget",
+  "uid": "ignoa-lock-time-budget",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "operation",
+        "label": "Lock operations",
+        "type": "query",
+        "definition": "label_values(lock_hold_time_seconds_count{application=\"ignoa-api\"}, operation)",
+        "query": "label_values(lock_hold_time_seconds_count{application=\"ignoa-api\"}, operation)",
+        "current": { "text": "bid", "value": "bid" },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 1,
+        "sort": 1,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "락 | 획득 시도량",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "description": "선택한 operation에서 초당 발생한 전체 락 획득 시도 수다.",
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "sum by (operation) (rate(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} attempts/s", "refId": "A" }
+      ]
+    },
+    {
+      "title": "락 | 획득 결과 비율",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "description": "각 operation의 전체 락 획득 시도 중 acquired, timeout 등 outcome별 비율이다.",
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "100 * sum by (operation, outcome) (rate(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m])) / ignoring(outcome) group_left sum by (operation) (rate(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} / {{outcome}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "락 | 획득 대기 시간",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "description": "락 획득에 성공한 요청의 대기시간 분포다. waitTime 후보를 판단할 때 결과 비율과 함께 확인한다.",
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" }
+      ]
+    },
+    {
+      "title": "락 | 보유 시간",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "description": "평균은 처리량 추정에, p95/p99와 최근 max는 leaseTime 후보와 안전 여유를 판단하는 데 사용한다.",
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum by (operation) (rate(lock_hold_time_seconds_sum{application=\"ignoa-api\", operation=~\"$operation\"}[1m])) / sum by (operation) (rate(lock_hold_time_seconds_count{application=\"ignoa-api\", operation=~\"$operation\"}[1m]))", "legendFormat": "{{operation}} avg", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" },
+        { "expr": "max by (operation) (lock_hold_time_seconds_max{application=\"ignoa-api\", operation=~\"$operation\"})", "legendFormat": "{{operation}} recent max", "refId": "D" }
+      ]
+    },
+    {
+      "title": "DB 전체 풀 | Hikari 커넥션 획득 시간",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "description": "operation별 값이 아닌 HikariPool 전체 분포다. 락 보유 시간 증가가 커넥션 대기 때문인지 확인한다.",
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{application=\"ignoa-api\"}[1m])))", "legendFormat": "p95", "refId": "A" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{application=\"ignoa-api\"}[1m])))", "legendFormat": "p99", "refId": "B" }
+      ]
+    },
+    {
+      "title": "DB 전체 풀 | HikariCP 커넥션",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 27 },
+      "description": "active가 최대 풀 크기에 가깝고 pending이 증가하면 커넥션 풀 경합을 의심한다.",
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "hikaricp_connections_active{application=\"ignoa-api\"}", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_pending{application=\"ignoa-api\"}", "legendFormat": "pending", "refId": "B" },
+        { "expr": "hikaricp_connections_idle{application=\"ignoa-api\"}", "legendFormat": "idle", "refId": "C" },
+        { "expr": "hikaricp_connections_max{application=\"ignoa-api\"}", "legendFormat": "max", "refId": "D" }
+      ]
+    },
+    {
+      "title": "DB 전체 풀 | Hikari 커넥션 획득 timeout",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "description": "connectionTimeout 안에 커넥션을 얻지 못한 초당 요청 수다. 정상 부하에서는 0이어야 한다.",
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } } },
+      "targets": [
+        { "expr": "sum(rate(hikaricp_connections_timeout_total{application=\"ignoa-api\"}[1m])) or vector(0)", "legendFormat": "timeout/s", "refId": "A" }
+      ]
+    }
+  ]
+}
