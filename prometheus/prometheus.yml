@@ -5,5 +5,5 @@ scrape_configs:
   - job_name: 'ignoa-api'
     metrics_path: "/actuator/prometheus"
     static_configs:
-      - targets: ['ignoa-api:38080']
+      - targets: ['ignoa-api-aws:38080']
 
