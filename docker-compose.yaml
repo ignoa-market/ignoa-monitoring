@@ -4,11 +4,11 @@ services:
     container_name: ignoa-prometheus
     ports:
       - "39090:9090"
+    extra_hosts:
+      - "ignoa-api-aws:${IGNOA_API_HOST}"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
-    networks:
-      - ignoa-api_default
     restart: unless-stopped
 
   loki:
@@ -17,8 +17,6 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki-data:/loki
-    networks:
-      - ignoa-api_default
     restart: unless-stopped
 
   promtail:
@@ -28,8 +26,6 @@ services:
     volumes:
       - ./promtail/promtail.yml:/etc/promtail/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - ignoa-api_default
     depends_on:
       - loki
     restart: unless-stopped
@@ -46,8 +42,6 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
-    networks:
-      - ignoa-api_default
     depends_on:
       - prometheus
       - loki
@@ -57,7 +51,3 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
-
-networks:
-  ignoa-api_default:
-    external: true
