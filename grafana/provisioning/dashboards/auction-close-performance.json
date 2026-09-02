@@ -4,7 +4,7 @@
   "title": "Auction Close | Performance",
   "uid": "ignoa-auction-close-performance",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
@@ -49,7 +49,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(auction_close_items_total{application=\"ignoa-api\", outcome=\"completed\"}[$__range])) / clamp_min(max_over_time(auction_close_job_duration_seconds_max{application=\"ignoa-api\"}[$__range]), 0.001)",
+          "expr": "sum(increase(auction_close_items_total{application=\"ignoa-api\", outcome=\"completed\"}[$__range])) / clamp_min(max(max_over_time(auction_close_job_duration_seconds_max{application=\"ignoa-api\"}[$__range])), 0.001)",
           "legendFormat": "items/s",
           "refId": "A",
           "instant": true
@@ -181,6 +181,64 @@
         {
           "expr": "sum by (outcome) (increase(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=\"auto_close\"}[$__range]))",
           "legendFormat": "lock {{outcome}}",
+          "refId": "B",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "title": "마감 Item | 처리 시간",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 24 },
+      "description": "분산 락을 획득한 뒤 상품 상태, 입찰 결과, 채팅방을 처리한 시간의 p95·p99다.",
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=\"auto_close\"}[$__range])))",
+          "legendFormat": "p95",
+          "refId": "A",
+          "instant": true
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(lock_hold_time_seconds_bucket{application=\"ignoa-api\", operation=\"auto_close\"}[$__range])))",
+          "legendFormat": "p99",
+          "refId": "B",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "title": "Redis | 락 획득 대기",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 24 },
+      "description": "자동 마감이 Redis 분산 락을 획득하기까지 기다린 시간의 p95·p99다. Worker Pool 적용 후 락 경합이 증가하는지 확인한다.",
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=\"auto_close\", outcome=\"acquired\"}[$__range])))",
+          "legendFormat": "p95",
+          "refId": "A",
+          "instant": true
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=\"auto_close\", outcome=\"acquired\"}[$__range])))",
+          "legendFormat": "p99",
           "refId": "B",
           "instant": true
         }
