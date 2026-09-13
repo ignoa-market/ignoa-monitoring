@@ -56,7 +56,8 @@
       "targets": [
         { "expr": "histogram_quantile(0.50, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p50", "refId": "A" },
         { "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" }
+        { "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(lock_acquire_wait_seconds_bucket{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])))", "legendFormat": "{{operation}} p99", "refId": "C" },
+        { "expr": "sum by (operation) (rate(lock_acquire_wait_seconds_sum{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m])) / sum by (operation) (rate(lock_acquire_wait_seconds_count{application=\"ignoa-api\", operation=~\"$operation\", outcome=\"acquired\"}[1m]))", "legendFormat": "{{operation}} avg", "refId": "D" }
       ]
     },
     {
